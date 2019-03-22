@@ -18,7 +18,7 @@ def pixel_sum(img,list_of_lines):
                 sum = sum + RGB
             line_sums.append((sum / len(line)) / 255)
             sum = 0
-        all_sums.append(tab)
+        all_sums.append(line_sums)
         line_sums = []
     return all_sums
 

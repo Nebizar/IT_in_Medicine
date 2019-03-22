@@ -7,6 +7,12 @@ Created on Fri Mar 15 11:59:35 2019
 
 import numpy as np
 
+
+"""
+    bresenham algorithm implementation
+    input: start, end-> tuple of coordinates
+    returns: numpy array of points lying on the line between start and end
+"""
 def bresenham(start, end):
     # step 1 get end-points of line 
     (x0, y0) = start
@@ -61,3 +67,4 @@ def bresenham(start, end):
     line_pixel = np.array(line_pixel)
     
     return line_pixel
+
