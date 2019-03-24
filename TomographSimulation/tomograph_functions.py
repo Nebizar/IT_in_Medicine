@@ -2,8 +2,59 @@
 """
 Created on Fri Mar 15 11:59:35 2019
 
-@author: Mikołaj Frankowski
+@author: Mikołaj Frankowski, Krzysztof Pasiewicz
 """
+import numpy as np
+
+# validate if point is on image or not
+def validate_point(point, size):
+    if point[0]>0 and point[0]<size and point[1]>0 and point[1]<size:
+        return True
+    else:
+        return False
+
+# make image square for easier computations
+def make_square(img):
+    from PIL import Image
+    
+    shape = img.size
+    if shape[0]>shape[1]:
+        expanded = Image.new("L", (shape[0], shape[0]))
+        expanded.paste(img, (int((shape[0]-shape[0])/2), int((shape[0]-shape[1])/2)))
+        return expanded, shape[0]
+    if shape[1]>shape[0]:
+        expanded = Image.new("L", (shape[1], shape[1]))
+        expanded.paste(img, (int((shape[1]-shape[0])/2), int((shape[1]-shape[1])/2)))
+        return expanded, shape[1]
+    else:
+        return img, shape[0]
+
+# ********************************************************************   
+# calculate points for emiter and detectors
+# emitter_deg -> position angle of emitter from main axis
+# detectors_deg -> angle between furthest detectors in emitter point
+# detectors_num -> number of detectors
+# size -> square image size
+# returns: numpy array of emitter coords, array of detectors positions
+# ********************************************************************
+def calculate_positions(emitter_deg, detectors_deg, detectors_num, size):
+    positions = []
+    angleEm = np.deg2rad(emitter_deg)
+    angleDet = np.deg2rad(detectors_deg)
+    r = (size * np.sqrt(2))/2
+    center = size/2
+    emitter_position = [int(r*np.cos(angleEm)+ center), int(r*np.sin(angleEm)+ center)]
+    if detectors_num > 1:
+        for detector in range(0,detectors_num):
+            positions.append([int(r*np.cos(angleEm + np.pi - angleDet/2 + detector * angleDet / (detectors_num-1) )+ center),
+                             int(r*np.sin(angleEm + np.pi - angleDet/2 + detector * angleDet / (detectors_num-1) )+ center)])
+    elif detectors_num == 1:
+        positions.append([int(r*np.cos(angleEm + np.pi)+ center),
+                          int(r*np.sin(angleEm + np.pi)+ center)])
+    else:
+        print("ValueError - detectors_num must be higher than 0 \n")
+        return [], []
+    return emitter_position, positions
 
 def pixel_sum(img,list_of_lines):
     sum = 0
