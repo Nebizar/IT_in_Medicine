@@ -56,7 +56,29 @@ def calculate_positions(emitter_deg, detectors_deg, detectors_num, size):
         return [], []
     return emitter_position, positions
 
-def pixel_sum(img,list_of_lines):
+
+# create list of all detections - each detections is list of arrays of points between emiter and aeach detector
+# iterations -> number of measurements
+# detectors_deg -> angle between furthest detectors in emitter point
+# detectors_num -> number of detectors
+# size -> square image size
+# returns: list of lists of lists of points to read
+def create_detections(iterations, detectors_deg, detectors_num, size):
+    from bresenham import bresenham
+    
+    emiterAngles = np.linspace(0., 360., iterations, endpoint=False)
+    list_of_lines =[]
+    for angle in emiterAngles:
+        measurement = []
+        emiter, detectors = calculate_positions(angle, detectors_deg, detectors_num, size)
+        for detector in detectors:
+            points = bresenham(emiter, detector)
+            measurement.append(points)
+        list_of_lines.append(measurement)
+    return list_of_lines
+            
+
+def pixel_sum(img,list_of_lines, size):
     sum = 0
     line_sums = []
     all_sums = []
@@ -64,10 +86,13 @@ def pixel_sum(img,list_of_lines):
     for lines in list_of_lines:
         for line in lines:
             for point in line:
-                x, y = point
-                RGB = img.getpixel((x, y))
-                sum = sum + RGB
-            line_sums.append((sum / len(line)) / 255)
+                lin_length = 0
+                if validate_point(point, size):
+                    x, y = point[0], point[1]
+                    RGB = img.getpixel((x, y))
+                    sum = sum + RGB
+                    lin_length += 1
+            line_sums.append((sum / lin_length) / 255)
             sum = 0
         all_sums.append(line_sums)
         line_sums = []

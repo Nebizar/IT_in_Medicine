@@ -67,4 +67,3 @@ def bresenham(start, end):
     line_pixel = np.array(line_pixel)
     
     return line_pixel
-
