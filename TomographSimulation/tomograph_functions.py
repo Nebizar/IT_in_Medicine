@@ -88,8 +88,8 @@ def sinogram(img,list_of_lines, size):
                 lin_length = 0
                 if validate_point(point, size):
                     x, y = point[0], point[1]
-                    RGB = img.getpixel((x, y))
-                    sum = sum + RGB
+                    color = img.getpixel((x, y))
+                    sum = sum + color
                     lin_length += 1
             line_sums.append((sum / lin_length) / 255)
             sum = 0
@@ -103,6 +103,23 @@ def process_img(emitter, detectors, sinogram_col, img):
             if validate_point(j[0], j[1]):
                 img[j[0]][j[1]] += sinogram_col[i]
 
+    return img
+
+def normalise(img):
+    maximum = 0
+    for column in img:
+        if max(column) > maximum:
+            maximum = max(column)
+
+    for i in range(len(img)):
+        for j in range(len(img[0])):
+            if maximum != 0 and img[i][j] > 0:
+                img[i][j] = img[i][j]/maximum
+            else:
+                img[i][j] = 0
+
+    return img
+
 def convolution(receivers_number,emitters_number):
     image = []
 
@@ -112,38 +129,38 @@ def convolution(receivers_number,emitters_number):
             row.append(0)
         image.append(row)
 
-    amout = receivers_number
+    amount = receivers_number
     result = []
 
-    for i in range(0, amout):
+    for i in range(0, amount):
         result.append(0)
 
     mask = []
-    for j in range(0, (amout * 2 - 1)):
+    for j in range(0, (amount * 2 - 1)):
         mask.append(0)
 
     rank_sum = 1;
 
-    for i in range(0,(amout * 2 - 1)):
-        j = i-amout + 1
+    for i in range(0,(amount * 2 - 1)):
+        j = i-amount + 1
         if(j%2 == 0):
             mask[i] = 0
         else:
             mask[i] = (-4/(np.pi*np.pi*j*j))
         rank_sum = rank_sum + mask[i]
 
-    mask[amout - 1] = 1
+    mask[amount - 1] = 1
     start = 0
     p = 0
 
     while(start < 2*np.pi):
-        for i in range(0,amout):
+        for i in range(0,amount):
             sum = 0
-            for j in range(0,(amout*2 -1)):
-                mask_dist = amout -1 -j
+            for j in range(0,(amount*2 -1)):
+                mask_dist = amount -1 -j
                 k = i - mask_dist
-                if((k>=0) and (k<amout)):
-                    sum = sum + image[p][k] * mask[amout-mask_dist-1]
+                if((k>=0) and (k<amount)):
+                    sum = sum + image[p][k] * mask[amount-mask_dist-1]
             image[p][i] = sum/rank_sum
         p = p + 1
         if(p==emitters_number):
