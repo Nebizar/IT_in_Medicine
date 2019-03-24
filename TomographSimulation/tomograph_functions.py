@@ -167,3 +167,24 @@ def convolution(receivers_number,emitters_number):
             break
         start  = start + (2*np.pi/emitters_number)
     return image
+
+def process_cone(detectors_num, detector_deg, iterations, size, img):
+    processed_img = np.zeros(size)
+
+    detections = create_detections(iterations, detector_deg, detectors_num, size)
+
+    sinogram = sinogram(img, detections, size)
+
+    angles = np.linspace(0., 360., iterations, endpoint=False)
+
+    for i in range(iterations):
+        angle = angles[i]
+        emitter, detectors = calculate_positions(angle, detector_deg, detectors_num, size)
+
+        sinogram_col = sinogram[i]
+
+        process_img(emitter, detectors, sinogram_col, processed_img)
+
+    normalise(processed_img)
+
+    return processed_img
