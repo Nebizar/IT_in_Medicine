@@ -5,6 +5,7 @@ Created on Fri Mar 15 11:59:35 2019
 @author: Mikołaj Frankowski, Krzysztof Pasiewicz
 """
 import numpy as np
+from bresenham import bresenham
 
 # validate if point is on image or not
 def validate_point(point, size):
@@ -64,8 +65,6 @@ def calculate_positions(emitter_deg, detectors_deg, detectors_num, size):
 # size -> square image size
 # returns: list of lists of lists of points to read
 def create_detections(iterations, detectors_deg, detectors_num, size):
-    from bresenham import bresenham
-    
     emiterAngles = np.linspace(0., 360., iterations, endpoint=False)
     list_of_lines =[]
     for angle in emiterAngles:
@@ -78,7 +77,7 @@ def create_detections(iterations, detectors_deg, detectors_num, size):
     return list_of_lines
             
 
-def pixel_sum(img,list_of_lines, size):
+def sinogram(img,list_of_lines, size):
     sum = 0
     line_sums = []
     all_sums = []
@@ -97,6 +96,12 @@ def pixel_sum(img,list_of_lines, size):
         all_sums.append(line_sums)
         line_sums = []
     return all_sums
+
+def process_img(emitter, detectors, sinogram_col, img):
+    for i in range(len(detectors)):
+        for j in bresenham(emitter[0], emitter[1], detectors[i][0], detectors[i][1]):
+            if validate_point(j[0], j[1]):
+                img[j[0]][j[1]] += sinogram_col[i]
 
 def convolution(receivers_number,emitters_number):
     image = []
