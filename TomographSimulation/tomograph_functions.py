@@ -5,16 +5,25 @@ Created on Fri Mar 15 11:59:35 2019
 @author: Mikołaj Frankowski, Krzysztof Pasiewicz
 """
 import numpy as np
-from bresenham import bresenham
+from bresenham import bresenham, bresenham_converted
 
+# *************************************
 # validate if point is on image or not
+# point -> tuple of coordinates (x, y)
+# size -> size of square image
+# returns: True if ok, else False
+# *************************************
 def validate_point(point, size):
-    if point[0]>0 and point[0]<size and point[1]>0 and point[1]<size:
+    if point[0]>=0 and point[0]<size and point[1]>=0 and point[1]<size:
         return True
     else:
         return False
 
+# **************************************************
 # make image square for easier computations
+# img -> iamge in PIL.Image format
+# returns: resized image; size of new, square image
+# **************************************************
 def make_square(img):
     from PIL import Image
     
@@ -57,13 +66,14 @@ def calculate_positions(emitter_deg, detectors_deg, detectors_num, size):
         return [], []
     return emitter_position, positions
 
-
+# *************************************************************************************************************
 # create list of all detections - each detections is list of arrays of points between emiter and aeach detector
 # iterations -> number of measurements
 # detectors_deg -> angle between furthest detectors in emitter point
 # detectors_num -> number of detectors
 # size -> square image size
-# returns: list of lists of lists of points to read
+# returns: list of lists of tuples of points to read
+# *************************************************************************************************************
 def create_detections(iterations, detectors_deg, detectors_num, size):
     emiterAngles = np.linspace(0., 360., iterations, endpoint=False)
     list_of_lines =[]
@@ -71,38 +81,38 @@ def create_detections(iterations, detectors_deg, detectors_num, size):
         measurement = []
         emiter, detectors = calculate_positions(angle, detectors_deg, detectors_num, size)
         for detector in detectors:
-            points = bresenham(emiter, detector)
+            points = bresenham_converted(emiter, detector)
             measurement.append(points)
         list_of_lines.append(measurement)
     return list_of_lines
             
 
 def sinogram(img,list_of_lines, size):
-    sum = 0
+    sum_color = 0
+    lin_length = 0
     line_sums = []
     all_sums = []
 
     for lines in list_of_lines:
         for line in lines:
             for point in line:
-                lin_length = 0
                 if validate_point(point, size):
-                    x, y = point[0], point[1]
+                    (x, y) = point
                     color = img.getpixel((x, y))
-                    sum = sum + color
+                    sum_color = sum_color + color
                     lin_length += 1
-            line_sums.append((sum / lin_length) / 255)
-            sum = 0
+            line_sums.append((sum_color / lin_length)/255)
+            sum_color = 0
+            lin_length = 0
         all_sums.append(line_sums)
         line_sums = []
     return all_sums
 
-def process_img(emitter, detectors, sinogram_col, img):
+def process_img(emitter, detectors, sinogram_col, img, size):
     for i in range(len(detectors)):
-        for j in bresenham(emitter[0], emitter[1], detectors[i][0], detectors[i][1]):
-            if validate_point(j[0], j[1]):
+        for j in bresenham(emitter, detectors[i]):
+            if validate_point(j, size):
                 img[j[0]][j[1]] += sinogram_col[i]
-
     return img
 
 def normalise(img):
@@ -169,11 +179,12 @@ def convolution(receivers_number,emitters_number):
     return image
 
 def process_cone(detectors_num, detector_deg, iterations, size, img):
-    processed_img = np.zeros(size)
+    processed_img = np.zeros((size,size))
 
     detections = create_detections(iterations, detector_deg, detectors_num, size)
 
-    sinogram = sinogram(img, detections, size)
+    sinogram_values = sinogram(img, detections, size)
+    #print(sinogram_values)
 
     angles = np.linspace(0., 360., iterations, endpoint=False)
 
@@ -181,10 +192,23 @@ def process_cone(detectors_num, detector_deg, iterations, size, img):
         angle = angles[i]
         emitter, detectors = calculate_positions(angle, detector_deg, detectors_num, size)
 
-        sinogram_col = sinogram[i]
+        sinogram_col = sinogram_values[i]
 
-        process_img(emitter, detectors, sinogram_col, processed_img)
+        processed_img = process_img(emitter, detectors, sinogram_col, processed_img, size)
 
     normalise(processed_img)
 
     return processed_img
+
+# ********************************************
+# convert array of values to PIL.Image format
+# array -> matrix of colors representng image
+# returns: image in PIL.Image format
+# ********************************************
+def convert_to_image(array):
+    from PIL import Image
+    
+    array = (np.array(array)*256).astype(np.uint8)
+    img = Image.fromarray(array)
+    return img
+    
