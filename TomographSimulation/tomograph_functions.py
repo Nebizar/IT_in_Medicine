@@ -112,7 +112,7 @@ def process_img(emitter, detectors, sinogram_col, img, size):
     for i in range(len(detectors)):
         for j in bresenham(emitter, detectors[i]):
             if validate_point(j, size):
-                img[j[0]][j[1]] += sinogram_col[i]
+                img[j[1]][j[0]] += sinogram_col[i]
     return img
 
 def normalise(img):
