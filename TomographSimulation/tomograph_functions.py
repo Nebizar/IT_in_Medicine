@@ -179,8 +179,12 @@ def convolution(receivers_number,emitters_number):
     return image
 
 def process_cone(detectors_num, detector_deg, iterations, size, img):
+    history = []
+    
     processed_img = np.zeros((size,size))
-
+    
+    history.append(processed_img.copy())
+    
     detections = create_detections(iterations, detector_deg, detectors_num, size)
 
     sinogram_values = sinogram(img, detections, size)
@@ -195,10 +199,10 @@ def process_cone(detectors_num, detector_deg, iterations, size, img):
         sinogram_col = sinogram_values[i]
 
         processed_img = process_img(emitter, detectors, sinogram_col, processed_img, size)
-
+        history.append(processed_img.copy())
     normalise(processed_img)
 
-    return processed_img
+    return processed_img, history
 
 # ********************************************
 # convert array of values to PIL.Image format
@@ -211,4 +215,13 @@ def convert_to_image(array):
     array = (np.array(array)*256).astype(np.uint8)
     img = Image.fromarray(array)
     return img
-    
+
+# ***************************************************  
+# prepares images of steps to animation
+# data -> array of images from process_cone function
+# returns: same array of normalised PIL.Image images
+# ***************************************************
+def prepare_images(data):
+    for i in range(len(data)):
+        data[i] =  convert_to_image(normalise(data[i]))
+    return data
