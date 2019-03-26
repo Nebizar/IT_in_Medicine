@@ -92,6 +92,7 @@ def sinogram(img,list_of_lines, size):
     lin_length = 0
     line_sums = []
     all_sums = []
+    history = []
 
     for lines in list_of_lines:
         for line in lines:
@@ -106,7 +107,8 @@ def sinogram(img,list_of_lines, size):
             lin_length = 0
         all_sums.append(line_sums)
         line_sums = []
-    return all_sums
+        history.append(all_sums.copy())
+    return all_sums, history
 
 def process_img(emitter, detectors, sinogram_col, img, size):
     for i in range(len(detectors)):
@@ -187,7 +189,7 @@ def process_cone(detectors_num, detector_deg, iterations, size, img):
     
     detections = create_detections(iterations, detector_deg, detectors_num, size)
 
-    sinogram_values = sinogram(img, detections, size)
+    sinogram_values, sinogram_history = sinogram(img, detections, size)
     #print(sinogram_values)
 
     angles = np.linspace(0., 360., iterations, endpoint=False)
@@ -202,7 +204,7 @@ def process_cone(detectors_num, detector_deg, iterations, size, img):
         history.append(processed_img.copy())
     normalise(processed_img)
 
-    return processed_img, history
+    return processed_img, history, sinogram_values, sinogram_history
 
 # ********************************************
 # convert array of values to PIL.Image format
@@ -224,4 +226,11 @@ def convert_to_image(array):
 def prepare_images(data):
     for i in range(len(data)):
         data[i] =  convert_to_image(normalise(data[i]))
+    return data
+
+def prepare_sinograms(data, iterations, detectors_num):
+    for i in range(len(data)):
+        empty = np.zeros((iterations,detectors_num))
+        empty[0:len(data[i]),:] = data[i] 
+        data[i] =  convert_to_image(normalise(empty))
     return data
