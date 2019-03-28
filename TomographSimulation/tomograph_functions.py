@@ -234,3 +234,11 @@ def prepare_sinograms(data, iterations, detectors_num):
         empty[0:len(data[i]),:] = data[i] 
         data[i] =  convert_to_image(normalise(empty))
     return data
+
+def error(img1,img2,size):
+    sum = 0
+    for i in range(0,size):
+        for j in range(0,size):
+           sum = sum + pow((img1.getpixel((i,j)) - img2[i][j]),2)
+    difference = (sum/pow(size,2))
+    return difference
