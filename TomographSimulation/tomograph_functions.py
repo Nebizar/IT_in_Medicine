@@ -93,12 +93,13 @@ def sinogram(img,list_of_lines, size):
     line_sums = []
     all_sums = []
     history = []
-
+    num_pix = np.zeros((size,size))
     for lines in list_of_lines:
         for line in lines:
             for point in line:
                 if validate_point(point, size):
                     (x, y) = point
+                    num_pix[x][y] += 1
                     color = img.getpixel((x, y))
                     sum_color = sum_color + color
                     lin_length += 1
@@ -108,7 +109,7 @@ def sinogram(img,list_of_lines, size):
         all_sums.append(line_sums)
         line_sums = []
         history.append(all_sums.copy())
-    return all_sums, history
+    return all_sums, history, num_pix
 
 def process_img(emitter, detectors, sinogram_col, img, size):
     for i in range(len(detectors)):
@@ -117,7 +118,25 @@ def process_img(emitter, detectors, sinogram_col, img, size):
                 img[j[1]][j[0]] += sinogram_col[i]
     return img
 
-def normalise(img):
+def normalise(img, num_pix):
+    maximum = 0
+    for i in range(len(num_pix[0])):
+        for j in range(len(num_pix[0])):
+            if num_pix[i][j] != 0:
+                img[i][j] = img[i][j]/num_pix[i][j]
+    for column in img:
+        if max(column) > maximum:
+            maximum = max(column)
+    
+    for i in range(len(img)):
+        for j in range(len(img[0])):
+            if maximum != 0 and img[i][j] > 0:
+                img[i][j] = img[i][j]/maximum
+            else:
+                img[i][j] = 0
+    return img
+
+def normalise_image(img):
     maximum = 0
     for column in img:
         if max(column) > maximum:
@@ -185,7 +204,7 @@ def process_cone(detectors_num, detector_deg, iterations, size, img):
     
     detections = create_detections(iterations, detector_deg, detectors_num, size)
 
-    sinogram_values, sinogram_history = sinogram(img, detections, size)
+    sinogram_values, sinogram_history, pix_num = sinogram(img, detections, size)
     #print(sinogram_values)
 
     angles = np.linspace(0., 360., iterations, endpoint=False)
@@ -198,7 +217,7 @@ def process_cone(detectors_num, detector_deg, iterations, size, img):
 
         processed_img = process_img(emitter, detectors, sinogram_col, processed_img, size)
         history.append(processed_img.copy())
-    normalise(processed_img)
+    normalise(processed_img, pix_num)
 
     return processed_img, history, sinogram_values, sinogram_history
 
@@ -214,7 +233,7 @@ def process_cone_filtered(detectors_num, detector_deg, iterations, size, img, ma
 
     mask = get_mask(mask_size)
 
-    sinogram_val, sinogram_history = sinogram(img, detections, size)
+    sinogram_val, sinogram_history, num_pix = sinogram(img, detections, size)
     # print(sinogram_values)
 
     sinogram_values = filter_sinogram(sinogram_val,mask)
@@ -229,7 +248,7 @@ def process_cone_filtered(detectors_num, detector_deg, iterations, size, img, ma
 
         processed_img = process_img(emitter, detectors, sinogram_col, processed_img, size)
         history.append(processed_img.copy())
-    normalise(processed_img)
+    normalise(processed_img, num_pix)
 
     return processed_img, history, sinogram_values, sinogram_history
 
@@ -252,14 +271,14 @@ def convert_to_image(array):
 # ***************************************************
 def prepare_images(data):
     for i in range(len(data)):
-        data[i] =  convert_to_image(normalise(data[i]))
+        data[i] =  convert_to_image(normalise_image(data[i]))
     return data
 
 def prepare_sinograms(data, iterations, detectors_num):
     for i in range(len(data)):
         empty = np.zeros((iterations,detectors_num))
         empty[0:len(data[i]),:] = data[i] 
-        data[i] =  convert_to_image(normalise(empty))
+        data[i] =  convert_to_image(normalise_image(empty))
     return data
 
 def error(img1,img2,size):
