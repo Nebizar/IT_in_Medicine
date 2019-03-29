@@ -151,7 +151,7 @@ def filter_sinogram(sinogram_in, mask):
     #TODO make initialisation work
     n=len(sinogram_in)
     m=len(sinogram_in[0])
-    sinogram_val=np.zeros(n,m)
+    sinogram_val=np.zeros((n,m))
     for i in range(len(sinogram_in)):
         for j in range(len(sinogram_in[i])):
             sinogram_val[i][j]=sinogram_in[i][j]
