@@ -132,53 +132,49 @@ def normalise(img):
 
     return img
 
-def convolution(receivers_number,emitters_number):
-    image = []
+def get_mask(mask_size):
+    assert isinstance(mask_size, int)
+    assert mask_size > 1
 
-    for i in range(emitters_number):
-        row = []
-        for j in range(receivers_number):
-            row.append(0)
-        image.append(row)
+    mask = np.zeros(shape=(mask_size, ), dtype=np.float64)
 
-    amount = receivers_number
-    result = []
-
-    for i in range(0, amount):
-        result.append(0)
-
-    mask = []
-    for j in range(0, (amount * 2 - 1)):
-        mask.append(0)
-
-    rank_sum = 1;
-
-    for i in range(0,(amount * 2 - 1)):
-        j = i-amount + 1
-        if(j%2 == 0):
-            mask[i] = 0
+    mask[0] = 1.0
+    for i in range(1, mask_size):
+        if i % 2 == 0:
+            mask[i] == 0.0
         else:
-            mask[i] = (-4/(np.pi*np.pi*j*j))
-        rank_sum = rank_sum + mask[i]
+            mask[i] = (-4 / (np.pi ** 2)) / (i ** 2)
+    return mask
 
-    mask[amount - 1] = 1
-    start = 0
-    p = 0
 
-    while(start < 2*np.pi):
-        for i in range(0,amount):
-            sum = 0
-            for j in range(0,(amount*2 -1)):
-                mask_dist = amount -1 -j
-                k = i - mask_dist
-                if((k>=0) and (k<amount)):
-                    sum = sum + image[p][k] * mask[amount-mask_dist-1]
-            image[p][i] = sum/rank_sum
-        p = p + 1
-        if(p==emitters_number):
-            break
-        start  = start + (2*np.pi/emitters_number)
-    return image
+def filter_sinogram(sinogram_in, mask):
+    #TODO make initialisation work
+    n=len(sinogram_in)
+    m=len(sinogram_in[0])
+    sinogram_val=np.zeros(n,m)
+    for i in range(len(sinogram_in)):
+        for j in range(len(sinogram_in[i])):
+            sinogram_val[i][j]=sinogram_in[i][j]
+    n_angles, n_detectors = sinogram_val.shape
+    assert n_detectors > 2
+    mask_size = mask.shape[0]
+    filtered = np.empty_like(sinogram_val)
+    for i_angle in range(n_angles):
+        for i_detector in range(n_detectors):
+            value = sinogram_val[i_angle, i_detector] * mask[0]
+            for dx in range(1, mask_size):
+                if i_detector + dx < n_detectors:
+                    value += sinogram_val[i_angle, i_detector + dx] * mask[dx]
+                if i_detector - dx >= 0:
+                    value += sinogram_val[i_angle, i_detector - dx] * mask[dx]
+            filtered[i_angle, i_detector] = value
+    filtered_sinogram = []
+    for i in range(n_angles):
+        filtered_sinogram_col = []
+        for j in range(n_detectors):
+            filtered_sinogram_col.append(filtered[i,j])
+        filtered_sinogram.append(filtered_sinogram_col)
+    return filtered_sinogram
 
 def process_cone(detectors_num, detector_deg, iterations, size, img):
     history = []
@@ -191,6 +187,37 @@ def process_cone(detectors_num, detector_deg, iterations, size, img):
 
     sinogram_values, sinogram_history = sinogram(img, detections, size)
     #print(sinogram_values)
+
+    angles = np.linspace(0., 360., iterations, endpoint=False)
+
+    for i in range(iterations):
+        angle = angles[i]
+        emitter, detectors = calculate_positions(angle, detector_deg, detectors_num, size)
+
+        sinogram_col = sinogram_values[i]
+
+        processed_img = process_img(emitter, detectors, sinogram_col, processed_img, size)
+        history.append(processed_img.copy())
+    normalise(processed_img)
+
+    return processed_img, history, sinogram_values, sinogram_history
+
+
+def process_cone_filtered(detectors_num, detector_deg, iterations, size, img, mask_size):
+    history = []
+
+    processed_img = np.zeros((size, size))
+
+    history.append(processed_img.copy())
+
+    detections = create_detections(iterations, detector_deg, detectors_num, size)
+
+    mask = get_mask(mask_size)
+
+    sinogram_val, sinogram_history = sinogram(img, detections, size)
+    # print(sinogram_values)
+
+    sinogram_values = filter_sinogram(sinogram_val,mask)
 
     angles = np.linspace(0., 360., iterations, endpoint=False)
 
